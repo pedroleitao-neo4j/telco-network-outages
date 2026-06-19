@@ -1,0 +1,6 @@
+.data/
+.vscode/
+.claude/
+__pycache__/
+renderings/*.html
+.env

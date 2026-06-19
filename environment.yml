@@ -1,0 +1,21 @@
+name: telco-network-outages
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pandas
+  - python-dotenv
+  - jupyterlab
+  - ipykernel
+  - ipywidgets
+  - matplotlib
+  - kaggle
+  - seaborn
+  - scikit-learn
+  - tqdm
+  - pip
+  - pip:
+      - neo4j
+      - neo4j-viz
+      - playwright
