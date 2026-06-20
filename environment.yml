@@ -13,6 +13,7 @@ dependencies:
   - kaggle
   - seaborn
   - scikit-learn
+  - xgboost
   - tqdm
   - pip
   - pip:
