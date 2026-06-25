@@ -95,3 +95,11 @@ In a domain where outages carry regulatory, financial and reputational weight, a
 The common thread is that **modelling disruptions as a graph in Neo4j adds a dimension the flat incident table cannot capture: what an event *looks like* relative to every other event.** Even after the conventional model exploits the dataset's single strongest feature (where an event sits in its location's fault history), the symptom-similarity graph still finds a genuinely **orthogonal** signal that lifts every metric - and lifts it on precisely the minority "few" / "many" classes an operations team cares about most. That is how triage goes from *good* to **great**: a new signal that is cheap to compute in Neo4j and drops straight into an existing ML pipeline.
 
 And because the graph lives in Neo4j, the same platform that *adds* the signal is the one that lets you *trust* it. The A/B harness that confirmed the symptom-similarity lift also let us test and retire a second graph that didn't pay - so what ships is only the structure that's provably real. **Neo4j is not just a query engine here - the graph itself is where the most predictive new signal comes from, and Neo4j is what makes that signal both discoverable and dependable.**
+
+## Proposed Agentic Flows
+
+Several specialized agentic flows can be integrated into the network outage prediction pipeline to automate key tasks. For instance, an incident cascade analysis flow can monitor new disruption events at specific locations, traverse the historical NEXT_EVENT network topology to estimate downstream propagation probabilities, and trigger proactive alerts to operations teams when cascade risks exceed a set threshold.
+
+Another flow can manage the machine learning validation harness, ensuring that any newly engineered graph feature is computed in a leakage-free manner strictly within training splits during repeated holdouts. Additionally, a symptom-similarity evolution flow can continuously monitor the performance of the similarity graph, dynamically adjusting nodeSimilarity thresholds or recalculating shared log-feature weights as telemetry patterns shift.
+
+Finally, a real-time ingestion alignment flow can consume raw logs from monitoring tools, map them to the (:DisruptionEvent) graph schema, and alert developers if new log-features or resource types emerge that require updating the model features.
