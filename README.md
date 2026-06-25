@@ -98,8 +98,26 @@ And because the graph lives in Neo4j, the same platform that *adds* the signal i
 
 ## Proposed Agentic Flows
 
-Several specialized agentic flows can be integrated into the network outage prediction pipeline to automate key tasks. For instance, an incident cascade analysis flow can monitor new disruption events at specific locations, traverse the historical NEXT_EVENT network topology to estimate downstream propagation probabilities, and trigger proactive alerts to operations teams when cascade risks exceed a set threshold.
+The graph built here is not just a feature store for one model - it is a ready-made **tool surface for an LLM agent**. The same parameterised Cypher and GDS queries the notebooks use for analysis (symptom-fingerprint lookup, similarity neighbours, a location's severity profile, the `NEXT_EVENT` cascade walk) become *tools* an agent can call, and the trained severity model becomes one more. Because every answer the agent gives traces back to concrete nodes and paths in Neo4j, its recommendations are **auditable** - the graph is what turns a plausible-sounding assistant into one that cites its evidence. Three flows follow naturally from this work.
 
-Another flow can manage the machine learning validation harness, ensuring that any newly engineered graph feature is computed in a leakage-free manner strictly within training splits during repeated holdouts. Additionally, a symptom-similarity evolution flow can continuously monitor the performance of the similarity graph, dynamically adjusting nodeSimilarity thresholds or recalculating shared log-feature weights as telemetry patterns shift.
+### Triage copilot (grounded GraphRAG)
 
-Finally, a real-time ingestion alignment flow can consume raw logs from monitoring tools, map them to the (:DisruptionEvent) graph schema, and alert developers if new log-features or resource types emerge that require updating the model features.
+The headline flow. Given a fresh disruption event, a tool-calling agent reasons through a triage decision by querying the graph rather than guessing:
+
+1. Read the event's **symptom fingerprint** - the `LOGGED` log-features it fired.
+2. Call `gds.nodeSimilarity` (the same `simlog` projection, `topK=20`, Jaccard cutoff `0.1`) to pull its closest historical look-alikes, and summarise how *they* resolved.
+3. Fetch its `Location`'s severity profile and its `NEXT_EVENT` cascade neighbours.
+4. Invoke the trained XGBoost model for a calibrated severity probability.
+5. Return a recommendation **with an evidence trail**: "treat as likely *many-fault* - it shares features `203, 71, 82` with incidents 4471/9912/10231, all of which became major outages at upstream-linked sites."
+
+This is retrieval-augmented generation grounded in the graph: the agent's confidence is backed by real, inspectable neighbours, so an operator can challenge it - the opposite of an opaque score.
+
+### Cascade blast-radius agent
+
+When a fault is confirmed at a location, an agent walks the directed `(:Location)-[:NEXT_EVENT {weight}]->(:Location)` graph to reason about *what's downstream*. It ranks at-risk neighbours by edge weight and PageRank (`cas_pr_dir`), decides whether projected propagation crosses an alerting threshold, and drafts a pre-emptive notice naming the specific sites and the path that put them at risk. The decision - alert, watch, or ignore - is the agent's; the multi-hop traversal is the evidence.
+
+### Drift & retrain watchdog
+
+The genuinely useful version of an MLOps loop. As new telemetry lands, an agent watches for **`LogFeature`, `ResourceType` or `EventType` codes that did not exist at training time** (new nodes the model has never seen) and quantifies how much of recent traffic now depends on unknown symptoms. When that share crosses a threshold, it doesn't just alert - it *decides* a retrain is warranted, kicks off the **leakage-free repeated-holdout A/B harness** already built in `predictor.ipynb`, and promotes the new model only if the graph features still earn their lift. This makes the project's own "prove the graph earns its keep" discipline self-sustaining.
+
+**Architecture in one line:** an LLM in a tool-calling loop, where the tools are the project's Cypher/GDS queries plus the trained model, all behind the existing `Neo4jAnalysis` driver wrapper - so the agent inherits the same grounding and rigour the notebooks already demonstrate.
